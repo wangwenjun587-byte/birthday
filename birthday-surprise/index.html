@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#070b19">
   <title>十七份礼物</title>
-  <link rel="stylesheet" href="style.css?v=20260827-sound">
+  <link rel="stylesheet" href="style.css?v=20260827-preload">
 </head>
 <body>
   <canvas id="sky" aria-hidden="true"></canvas>
@@ -13,7 +13,11 @@
   <div id="sparkleLayer" aria-hidden="true"></div>
   <div class="sound-gate" id="soundGate">
     <p>FOR XINGJING</p>
-    <button id="unlockSoundButton" type="button">开启今晚</button>
+    <div class="preload-status" aria-live="polite">
+      <span id="preloadStatus">正在准备回忆 0%</span>
+      <span class="preload-track" aria-hidden="true"><i id="preloadProgress"></i></span>
+    </div>
+    <button id="unlockSoundButton" type="button" disabled>正在准备...</button>
   </div>
   <main class="experience" id="experience" data-stage="intro">
     <section class="scene intro-scene is-waiting" aria-labelledby="intro-title">
@@ -52,9 +56,7 @@
     </section>
   </main>
 
-  <audio id="music" preload="auto" autoplay loop>
-    <source src="https://wangwenjun587-byte.github.io/birthday/music/%E6%A3%B1%E9%95%9C%E4%B9%90%E9%98%9F-%E5%85%8B%E6%9E%97.mp3" type="audio/mpeg">
-  </audio>
-  <script src="app.js?v=20260827-sound"></script>
+  <audio id="music" preload="none" loop></audio>
+  <script src="app.js?v=20260827-preload2"></script>
 </body>
 </html>

@@ -35,6 +35,8 @@ const restartButton = document.getElementById('restartButton');
 const music = document.getElementById('music');
 const soundGate = document.getElementById('soundGate');
 const unlockSoundButton = document.getElementById('unlockSoundButton');
+const preloadStatus = document.getElementById('preloadStatus');
+const preloadProgress = document.getElementById('preloadProgress');
 const introScene = document.querySelector('.intro-scene');
 const introParticlesCanvas = document.getElementById('introParticles');
 const titleEl = document.getElementById('chapter-title');
@@ -43,10 +45,104 @@ const lineEl = document.getElementById('chapter-line');
 const photoGrid = document.getElementById('photoGrid');
 const memoryStage = document.getElementById('memoryStage');
 const constellation = document.getElementById('constellation');
+const photoBlobUrls = new Map();
+const musicSourceUrl = window.location.hostname.endsWith('github.io')
+  ? '../music/%E6%A3%B1%E9%95%9C%E4%B9%90%E9%98%9F-%E5%85%8B%E6%9E%97.mp3'
+  : './music.mp3';
 let currentChapter = 0;
+let musicBlobUrl = '';
+let assetsReady = false;
+let preloadPromise = null;
 
 function photoUrl(number) {
-  return `${PHOTO_BASE}${String(number).padStart(2, '0')}.jpg`;
+  return photoBlobUrls.get(number) || `${PHOTO_BASE}${String(number).padStart(2, '0')}.jpg`;
+}
+
+function updatePreloadProgress(completed, total) {
+  const percent = Math.round((completed / total) * 100);
+  preloadStatus.textContent = `正在准备回忆 ${percent}%`;
+  preloadProgress.style.width = `${percent}%`;
+}
+
+async function loadAsset(task) {
+  const response = await fetch(task.url, { cache: 'force-cache' });
+  if (!response.ok) throw new Error(`Asset failed: ${task.url}`);
+  const blobUrl = URL.createObjectURL(await response.blob());
+
+  if (task.type === 'music') {
+    musicBlobUrl = blobUrl;
+    music.src = musicBlobUrl;
+    music.load();
+  } else {
+    photoBlobUrls.set(task.number, blobUrl);
+  }
+}
+
+function waitForMusicReady() {
+  if (music.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    music.addEventListener('canplaythrough', resolve, { once: true });
+    music.addEventListener('error', () => reject(new Error('Music failed to decode')), { once: true });
+  });
+}
+
+async function loadAllAssets() {
+  const total = 69;
+  const photoTasks = Array.from({ length: 68 }, (_, index) => ({
+    type: 'photo',
+    number: index + 1,
+    url: `${PHOTO_BASE}${String(index + 1).padStart(2, '0')}.jpg`
+  })).filter((task) => !photoBlobUrls.has(task.number));
+  let completed = photoBlobUrls.size + (musicBlobUrl ? 1 : 0);
+  updatePreloadProgress(completed, total);
+
+  if (!musicBlobUrl) {
+    preloadStatus.textContent = '正在优先准备音乐';
+    await loadAsset({ type: 'music', url: musicSourceUrl });
+    await waitForMusicReady();
+    completed += 1;
+    updatePreloadProgress(completed, total);
+  } else {
+    await waitForMusicReady();
+  }
+
+  preloadStatus.textContent = `音乐已准备好 · 正在准备照片 ${Math.round((completed / total) * 100)}%`;
+  let cursor = 0;
+  async function worker() {
+    while (cursor < photoTasks.length) {
+      const task = photoTasks[cursor++];
+      await loadAsset(task);
+      completed += 1;
+      updatePreloadProgress(completed, total);
+    }
+  }
+
+  await Promise.all(Array.from({ length: Math.min(6, photoTasks.length) }, worker));
+  assetsReady = true;
+  preloadStatus.textContent = '照片和音乐已准备好';
+  unlockSoundButton.disabled = false;
+  unlockSoundButton.textContent = '开启今晚';
+}
+
+async function beginPreload() {
+  if (!preloadPromise) {
+    unlockSoundButton.disabled = true;
+    unlockSoundButton.textContent = '正在准备...';
+    preloadPromise = loadAllAssets().catch((error) => {
+      preloadPromise = null;
+      preloadStatus.textContent = '加载没有完成，请重试';
+      unlockSoundButton.disabled = false;
+      unlockSoundButton.textContent = '重新准备';
+      throw error;
+    });
+  }
+
+  try {
+    await preloadPromise;
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function renderChapter() {
@@ -127,6 +223,7 @@ restartButton.addEventListener('click', startExperience);
 
 async function playMusic() {
   music.volume = 0.72;
+  music.loop = true;
   if (!music.paused) return true;
   try {
     await music.play();
@@ -154,22 +251,40 @@ function startOpening() {
 }
 
 async function attemptAutomaticOpening() {
+  if (!assetsReady || openingStarted) return;
   if (await playMusic()) startOpening();
 }
 
 async function unlockOpening() {
-  await playMusic();
-  startOpening();
+  if (!assetsReady && !(await beginPreload())) return;
+  if (await playMusic()) {
+    startOpening();
+    return;
+  }
+  preloadStatus.textContent = '请再点一次开启声音';
+}
+
+function keepMusicPlaying() {
+  if (!openingStarted || !assetsReady || !music.paused) return;
+  playMusic();
 }
 
 unlockSoundButton.addEventListener('click', unlockOpening);
-soundGate.addEventListener('click', unlockOpening);
-music.addEventListener('canplaythrough', attemptAutomaticOpening, { once: true });
+music.addEventListener('ended', () => {
+  music.currentTime = 0;
+  keepMusicPlaying();
+});
+music.addEventListener('pause', () => {
+  if (!document.hidden) setTimeout(keepMusicPlaying, 0);
+});
+document.addEventListener('pointerdown', keepMusicPlaying, { capture: true });
 window.addEventListener('focus', attemptAutomaticOpening);
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden) attemptAutomaticOpening();
 });
-attemptAutomaticOpening();
+beginPreload().then((ready) => {
+  if (ready) attemptAutomaticOpening();
+});
 
 function textLines(element) {
   return element.innerText.split('\n').map((line) => line.trim()).filter(Boolean);

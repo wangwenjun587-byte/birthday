@@ -87,6 +87,31 @@ button { font: inherit; }
   letter-spacing: 3px;
 }
 
+.preload-status {
+  display: grid;
+  width: min(280px, 72vw);
+  gap: 12px;
+  color: rgba(251, 247, 238, 0.72);
+  font-size: 12px;
+  text-align: center;
+}
+
+.preload-track {
+  display: block;
+  height: 2px;
+  overflow: hidden;
+  background: rgba(251, 247, 238, 0.14);
+}
+
+.preload-track i {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: var(--gold);
+  box-shadow: 0 0 12px rgba(241, 200, 120, 0.72);
+  transition: width 260ms ease;
+}
+
 .sound-gate button {
   min-width: 190px;
   min-height: 52px;
@@ -103,6 +128,14 @@ button { font: inherit; }
   background: var(--gold);
   color: #24180d;
   transform: translateY(-2px);
+}
+
+.sound-gate button:disabled {
+  border-color: rgba(241, 200, 120, 0.34);
+  background: rgba(241, 200, 120, 0.04);
+  color: rgba(251, 247, 238, 0.48);
+  cursor: wait;
+  transform: none;
 }
 
 .experience { position: relative; z-index: 2; min-height: 100svh; }
