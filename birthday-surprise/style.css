@@ -61,6 +61,50 @@ button { font: inherit; }
   z-index: 3;
 }
 
+.sound-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 6;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 28px;
+  background: rgba(7, 11, 25, 0.82);
+  backdrop-filter: blur(3px);
+  transition: opacity 650ms ease, visibility 650ms ease;
+}
+
+.sound-gate.is-hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.sound-gate p {
+  margin: 0;
+  color: var(--gold);
+  font: 700 11px/1 Arial, sans-serif;
+  letter-spacing: 3px;
+}
+
+.sound-gate button {
+  min-width: 190px;
+  min-height: 52px;
+  border: 1px solid var(--gold);
+  border-radius: 4px;
+  background: rgba(241, 200, 120, 0.1);
+  color: var(--paper);
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: background 220ms ease, color 220ms ease, transform 220ms ease;
+}
+
+.sound-gate button:hover {
+  background: var(--gold);
+  color: #24180d;
+  transform: translateY(-2px);
+}
+
 .experience { position: relative; z-index: 2; min-height: 100svh; }
 
 .sparkle {
@@ -102,6 +146,7 @@ button { font: inherit; }
 }
 
 .intro-scene { align-content: center; text-align: center; }
+.intro-scene.is-waiting > * { opacity: 0; }
 .intro-scene.is-assembling { pointer-events: none; }
 .intro-scene.is-assembling > * { opacity: 0; }
 .intro-scene.is-assembling.is-revealing > * { opacity: 1; }

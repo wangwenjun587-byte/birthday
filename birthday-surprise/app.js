@@ -33,6 +33,8 @@ const beginButton = document.getElementById('beginButton');
 const nextButton = document.getElementById('nextButton');
 const restartButton = document.getElementById('restartButton');
 const music = document.getElementById('music');
+const soundGate = document.getElementById('soundGate');
+const unlockSoundButton = document.getElementById('unlockSoundButton');
 const introScene = document.querySelector('.intro-scene');
 const introParticlesCanvas = document.getElementById('introParticles');
 const titleEl = document.getElementById('chapter-title');
@@ -123,20 +125,51 @@ beginButton.addEventListener('click', startExperience);
 nextButton.addEventListener('click', showNextChapter);
 restartButton.addEventListener('click', startExperience);
 
-function playMusic() {
+async function playMusic() {
   music.volume = 0.72;
-  if (!music.paused) return;
-  music.play().catch(() => {});
+  if (!music.paused) return true;
+  try {
+    await music.play();
+    return true;
+  } catch {
+    return false;
+  }
 }
 
-playMusic();
-music.addEventListener('canplaythrough', playMusic, { once: true });
-document.addEventListener('pointerdown', playMusic, { once: true });
-document.addEventListener('keydown', playMusic, { once: true });
-window.addEventListener('focus', playMusic);
+let openingStarted = false;
+
+function startOpening() {
+  if (openingStarted) return;
+  openingStarted = true;
+  soundGate.classList.add('is-hidden');
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    introScene.classList.remove('is-waiting');
+    return;
+  }
+  introScene.classList.add('is-assembling');
+  introScene.classList.remove('is-waiting');
+  createOpeningMeteor();
+  nextMeteorAt = performance.now() + 3200;
+  requestAnimationFrame(startIntroAssembly);
+}
+
+async function attemptAutomaticOpening() {
+  if (await playMusic()) startOpening();
+}
+
+async function unlockOpening() {
+  await playMusic();
+  startOpening();
+}
+
+unlockSoundButton.addEventListener('click', unlockOpening);
+soundGate.addEventListener('click', unlockOpening);
+music.addEventListener('canplaythrough', attemptAutomaticOpening, { once: true });
+window.addEventListener('focus', attemptAutomaticOpening);
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden) playMusic();
+  if (!document.hidden) attemptAutomaticOpening();
 });
+attemptAutomaticOpening();
 
 function textLines(element) {
   return element.innerText.split('\n').map((line) => line.trim()).filter(Boolean);
@@ -247,8 +280,6 @@ function startIntroAssembly() {
   };
   requestAnimationFrame(animate);
 }
-
-requestAnimationFrame(startIntroAssembly);
 
 const sky = document.getElementById('sky');
 const context = sky.getContext('2d');
@@ -379,8 +410,7 @@ function drawSky(time) {
 }
 
 resizeSky();
-createOpeningMeteor();
-nextMeteorAt = performance.now() + 3200;
+nextMeteorAt = performance.now() + 5000;
 drawSky();
 window.addEventListener('resize', resizeSky);
 window.addEventListener('resize', () => photoGrid.querySelectorAll('img').forEach(preparePortraitPhoto));
